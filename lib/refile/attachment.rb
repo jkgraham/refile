@@ -62,6 +62,10 @@ module Refile
           send(attacher).get
         end
 
+        define_method "store_#{name}" do
+          send(attacher).store!
+        end
+
         define_method "remove_#{name}=" do |remove|
           send(attacher).remove = remove
         end

@@ -12,7 +12,7 @@ module Refile
       @record = record
       @name = name
       @raise_errors = raise_errors
-      @cache = Refile.backends.fetch(cache.to_s)
+      @cache = Refile.backends.fetch(cache.to_s) if cache
       @store = Refile.backends.fetch(store.to_s)
       @type = type
       @valid_extensions = [extension].flatten if extension
@@ -60,7 +60,7 @@ module Refile
     end
 
     def get
-      if cache_id
+      if cache && cache_id
         cache.get(cache_id)
       elsif id
         store.get(id)
@@ -88,7 +88,11 @@ module Refile
         filename: Refile.extract_filename(uploadable)
       }
       if valid?
-        @metadata[:id] = cache.upload(uploadable).id
+        if cache
+          @metadata[:id] = cache.upload(uploadable).id
+        else
+          write(:id, store.upload(uploadable).id)
+        end
         write_metadata
       elsif @raise_errors
         raise Refile::Invalid, @errors.join(", ")
@@ -104,7 +108,11 @@ module Refile
           content_type: file.meta["content-type"]
         }
         if valid?
-          @metadata[:id] = cache.upload(file).id
+          if cache
+            @metadata[:id] = cache.upload(file).id
+          else
+            write(:id, store.upload(file).id)
+          end
           write_metadata
         elsif @raise_errors
           raise Refile::Invalid, @errors.join(", ")
@@ -120,7 +128,7 @@ module Refile
       if remove?
         delete!
         write(:id, nil)
-      elsif cache_id
+      elsif cache && cache_id
         file = store.upload(get)
         delete!
         write(:id, file.id)
@@ -130,7 +138,7 @@ module Refile
     end
 
     def delete!
-      cache.delete(cache_id) if cache_id
+      cache.delete(cache_id) if cache && cache_id
       store.delete(id) if id
       @metadata = {}
     end
@@ -155,7 +163,11 @@ module Refile
       @errors = []
       @errors << :invalid_extension if valid_extensions and not valid_extensions.include?(extension)
       @errors << :invalid_content_type if valid_content_types and not valid_content_types.include?(content_type)
-      @errors << :too_large if cache.max_size and size and size >= cache.max_size
+      if cache
+        @errors << :too_large if cache.max_size and size and size >= cache.max_size
+      else
+        @errors << :too_large if store.max_size and size and size >= store.max_size
+      end
       @errors.empty?
     end
 
