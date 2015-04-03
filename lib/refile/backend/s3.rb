@@ -30,10 +30,11 @@ module Refile
       # @param [Hash] s3_options          Additional options to initialize S3 with
       # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/Core/Configuration.html
       # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/S3.html
-      def initialize(access_key_id:, secret_access_key:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
+      def initialize(access_key_id: nil, secret_access_key: nil, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
         @access_key_id = access_key_id
         @secret_access_key = secret_access_key
-        @s3_options = { access_key_id: access_key_id, secret_access_key: secret_access_key }.merge s3_options
+        s3_options.merge!({access_key_id: access_key_id, secret_access_key: secret_access_key }) if access_key_id && secret_access_key
+        @s3_options = s3_options
         @s3 = AWS::S3.new @s3_options
         @bucket_name = bucket
         @bucket = @s3.buckets[@bucket_name]
